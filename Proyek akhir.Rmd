@@ -1,0 +1,276 @@
+---
+title: "Case_Study_Google_data_analitik"
+author: "Muhammad Jafar Shodiq"
+date: "2022-10-27"
+output:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Bagaimana bisnis berbagi sepeda mencapai kesuksesan?
+
+### Skenario
+
+Anda adalah seorang analis data junior yang bekerja di tim analis pemasaran di Cyclistic, sebuah perusahaan berbagi sepeda di Chicago. Direktur pemasaran percaya bahwa kesuksesan perusahaan di masa depan tergantung pada upaya untuk memaksimalkan jumlah keanggotaan tahunan (Member). Oleh karena itu, tim Anda ingin memahami bagaimana pengendara biasa (Casual) dan Member menggunakan sepeda Cyclistic secara berbeda. Dari wawasan ini, tim Anda akan merancang strategi pemasaran baru untuk mengubah pengendara Casual menjadi pengendara Member. Tetapi pertama-tama, para eksekutif Cyclistic harus menyetujui rekomendasi Anda, sehingga rekomendasi tersebut harus didukung dengan wawasan data yang menarik dan visualisasi data profesional.
+
+### Bertanya
+__Identifikasi tugas bisnis__
+
+Tim analitik pemasaran Cyclistic menyimpulkan bahwa pengendara Member lebih menguntungkan dari pada pengendara biasa, sehingga Lily Moreno sebagai Direktur Pemasaran memutuskan untuk mengubah pengendara biasa (Casual) menjadi pengendara tahunan (Member).
+
+Analisis dari Tim analitik pemasaran Cyclistic akan membantu membuat strategi agar para pengguna casual beralih menjadi member.
+
+__Pemangku kepentingan utama__
+
+Pemangku kepentingan utama: Lily Moreno (Direktur pemasaran), Tim analitik pemasaran Cyclistic, dan Tim eksekutif Cyclistic.
+
+### Mepersiapkan
+
+__Sumber data__
+
+Data yang digunakan adalah data perjalanan historis Cyclistic selama satu tahun yang disediakan oleh [Motivate International Inc](https://divvy-tripdata.s3.amazonaws.com/index.html). Dataset tersebut adalah data publik yang dapat digunakan untuk mengeksplorasi bagaimana jenis pelanggan yang berbeda menggunakan sepeda Cyclistic.
+
+__Identifikasi pengaturan data__
+
+Data tersimpan dalam sebuah repositori. Penamaan file menyertakan tanggal, versi, dan tidak ada penamaan file yang berulang
+
+__Kualitas data__
+
+Kualitas data dengan pendekatan ROCCC
+
+1. Reliable
+
+    Data memiliki informasi yang akurat dan tidak bias.
+2. Original
+
+    Data yang digunakan disediakan langsung oleh Motivate International Inc.
+3. Comperhensive
+
+    Dataset mempunyai informasi yang dibutuhkan untuk menemukan solusi.
+4. Current
+
+    Data yang digunakan mulai dari Oktober 2021 sampai September 2022.
+5. Cite
+
+    Data yang digunakan adalah data public yang disediakan oleh Motivate International Inc.
+    
+### Proses
+
+__Import library__
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(scales)
+library(tinytex)
+```
+
+__Import dataset__
+
+```{r}
+t2021_10 <- read.csv("dataset/202110-divvy-tripdata.csv")
+t2021_11 <- read.csv("dataset/202111-divvy-tripdata.csv")
+t2021_12 <- read.csv("dataset/202112-divvy-tripdata.csv")
+t2022_01 <- read.csv("dataset/202201-divvy-tripdata.csv")
+t2022_02 <- read.csv("dataset/202202-divvy-tripdata.csv")
+t2022_03 <- read.csv("dataset/202203-divvy-tripdata.csv")
+t2022_04 <- read.csv("dataset/202204-divvy-tripdata.csv")
+t2022_05 <- read.csv("dataset/202205-divvy-tripdata.csv")
+t2022_06 <- read.csv("dataset/202206-divvy-tripdata.csv")
+t2022_07 <- read.csv("dataset/202207-divvy-tripdata.csv")
+t2022_08 <- read.csv("dataset/202208-divvy-tripdata.csv")
+t2022_09 <- read.csv("dataset/202209-divvy-publictripdata.csv")
+```
+
+__Menyatukan dataset__
+
+```{r}
+all_data <- bind_rows(t2021_10,t2021_11,t2021_12,t2022_01,t2022_02,t2022_03,t2022_04,t2022_05,t2022_06,t2022_07,t2022_08,t2022_09)
+```
+
+__Menghapus kolom yang tidak diperlukan__
+
+```{r}
+all_data <- all_data %>% 
+  select(-c(start_lat, start_lng, end_lat, end_lng))
+```
+
+### Menganalisis
+
+__Melihat 6 baris pertama__
+
+```{r}
+head(all_data)
+```
+__Melihat kategori pada kolom member_casual__
+
+```{r}
+table(all_data$member_casual)
+```
+
+kolom member_casual hanya ada dua kategori yaitu casual dan member
+
+__Menambahkan kolom tanggal, bulan, hari, dan tahun__
+
+```{r}
+all_data$date <- as.Date(all_data$started_at)
+all_data$month <- format(as.Date(all_data$date), "%m")
+all_data$day <- format(as.Date(all_data$date), "%d")
+all_data$year <- format(as.Date(all_data$date), "%Y")
+all_data$day_of_week <- format(as.Date(all_data$date), "%A")
+```
+
+__Membuat kolom ride_length yang isinya panjang perjalan dalam detik__
+
+```{r}
+all_data$ride_length <- as.numeric(difftime(all_data$ended_at,all_data$started_at))
+```
+
+__Mengecek apakah ada data negatif pada kolom ride_length__
+
+```{r}
+nrow(all_data[all_data$ride_length < 0,])
+```
+
+__Membuat tabel baru yang didalam kolom ride_length tidak ada negatif__
+
+```{r}
+all_data_v2 <- all_data[!(all_data$ride_length<0),]
+```
+
+__Analisis deskriptif kolom ride_length__
+
+```{r}
+summary(all_data_v2$ride_length)/60
+```
+
+__Perbadingan pengguna Member dan pengendara Casual__
+
+```{r}
+aggregate(all_data_v2$ride_length ~ all_data_v2$member_casual, FUN = mean)
+aggregate(all_data_v2$ride_length ~ all_data_v2$member_casual, FUN = median)
+aggregate(all_data_v2$ride_length ~ all_data_v2$member_casual, FUN = max)
+aggregate(all_data_v2$ride_length ~ all_data_v2$member_casual, FUN = min)
+```
+
+Dengan perhitungan diatas pengendara pengendara Casual mempunyai panjang perjalanan lebih lama dari pada pengendara Member. 
+
+__Urutkan berdasarkan hari__
+
+```{r}
+all_data_v2$day_of_week <- ordered(all_data_v2$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+
+__Melihat rata-rata ride_length perhari untuk pengguna Casual vs pengendara Member__
+
+```{r}
+aggregate(all_data_v2$ride_length/60 ~ all_data_v2$member_casual + all_data_v2$day_of_week, FUN = mean)
+```
+
+__#analisis pengendara bedasarkan tipe dan hari__
+
+```{r}
+all_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>%
+  summarise(number_of_rides = n(),average_duration = mean(ride_length/60)) %>% 
+  arrange(member_casual, weekday)	
+```
+__Analisis__
+
+* Pengendara Casual mempunyai perjalanan terlama pada hari minggu diikuti hari sabtu.
+* pengendara Member mempunyai perjalanan terlama pada hari sabtu diikuti hari minggu.
+* Jumlah Pengendara Casual selalu bertambah mulai dari hari selasa dan puncaknya pada hari sabtu, setelah itu menurun pada hari minggu dan senin
+* Jumlah pengendara Member berangsur menurun mulai dari hari selasa sampai hari minggu dan mengalami kenaikan pada hari senin.
+
+### Membagikan
+
+__visualisasi jumlah pengendara per hari berdasarkan tipe pengendara__
+
+```{r}
+jumlah_pengendara <- all_data_v2 %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>%
+  summarise(number_of_rides = n(),average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(x = "Hari", y = "Jumlah Pengendara per Hari",
+       title = "Total Pengendara Berdasarkan Hari",
+       subtitle = "Oktober 2021 sampai September 2022")
+```
+
+```{r}
+jumlah_pengendara + scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
+```
+Rata-rata pengendara Member lebih banyak memakai sepeda pada hari kerja, sedangkan Casual  menggunakan sepeda pada hari akhir pekan.
+
+__visualisasi rata-rata durasi perjalanan berdasarkan hari dan tipe pengendara__
+
+```{r}
+durasi_perjalanan <- all_data_v2 %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>%
+  summarise(number_of_rides = n(),average_duration = mean(ride_length)/60) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = average_duration, group = member_casual)) +
+  geom_line(aes(color = member_casual)) +
+  geom_point(aes(color = member_casual)) +
+  labs(x = "Hari", y = "Rata-rata durasi perjalanan (menit)",
+       title = "Rata-rata Durasi Perjalanan Bedasarkan Hari",
+       subtitle = "Oktober 2021 sampai September 2022")
+```
+
+```{r}
+durasi_perjalanan
+```
+Rata-rata durasi perjalan pemgendara biasa yang lebih tinggi dari pada pengendara Member.
+
+__visualisasi jumlah pengendara per bulan berdasarkan tipe pengendara__
+
+```{r}
+jumlah_pengendara_bulan <- all_data_v2 %>% 
+  group_by(member_casual, month) %>% 
+  summarise(number_of_rides = n()) %>% 
+  arrange(member_casual, month) %>% 
+  ggplot(aes(x = month, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") + 
+  labs(x = "Bulan", y = "Jumlah Pengendara Per Bulan",
+       title = "Total Pengendara Berdasarkan Bulan",
+       subtitle = "Bulan Oktober 2021 sampai September 2022")
+```
+
+```{r}
+jumlah_pengendara_bulan + scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
+```
+Para pesepeda kebanyakan berkendara pada bulan Mei sampai Oktober dan pada saat itu Kota chicago tidak mengalami musim dingin. 
+
+__Visualisasi Jumlah tipe sepeda yang dipakai berdasarkan pengedara biasa dan pengendara member__
+
+```{r}
+tipe_sepeda <- all_data_v2 %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarise(number_of_rides = n()) %>% 
+  arrange(member_casual, rideable_type) %>% 
+  ggplot(aes(x = rideable_type, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(x = "Tipe Sepeda", y = "Jumlah Pengendara per Tipe Sepeda",
+       title = "Jumlah Pengendara Bedasarkan Tipe Sepeda",
+       subtitle = "Bulan Oktober 2021 sampai September 2022")
+```
+
+```{r}
+tipe_sepeda + scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
+```
+
+Sepeda dengan tipe docked_bike mempunyai jumlah pengendara paling sedikit dibanding tipe lainnya. Tipe sepeda docked_bike juga hanya digunakan oleh pengendara Casual.
+
+### Bertindak
+
+__Berikut beberapa rekomendasi berdasarkan analisis__
+1. Membuat program Member bulanan untuk menarik pengendara biasa yang bersepeda sepanjang tahun.
+2. Melakukan promosi pada musim semi sampai musim panas, dimaana pada saat itu orang-orang banyak menggunakan sepeda.
+3. Membuat kampanye yang menargetkan pengendara Casual untuk berangkat kerja dengan memakai sepeda.
